@@ -16,9 +16,6 @@ Consolidata reads documents that arrive from different departments or subsidiari
 | Nevzat Han Altın | han.altin@ug.bilkent.edu.tr |
 | Umut Çağın Özcan | cagin.ozcan@ug.bilkent.edu.tr |
 
-## Project documents
-
-- [Project draft (Turkish)](docs/proje-taslagi.pdf)
 
 ## Website
 
