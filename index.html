@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Consolidata – Intelligent document processing and data consolidation</title>
+<meta name="description" content="Consolidata reads corporate documents in any format without fixed templates, maps them to a common data model, validates them, and keeps every value traceable to its source cell. Bilkent University CS491 senior design project.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%231F6E52'/><path d='M8 10h7M8 16h7M8 22h7M17 10l7 6-7 6' stroke='white' stroke-width='2.4' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700;800&family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #F1F4F7;
+    --sheet: #FFFFFF;
+    --ink: #14233A;
+    --ink-soft: #4E5D72;
+    --rule: #C9D2DD;
+    --grid: #E3E8EE;
+    --ledger: #1F6E52;
+    --ledger-tint: #DCEDE5;
+    --flag: #F3D35B;
+    --flag-ink: #5A4500;
+    --sans: "Schibsted Grotesk", "Helvetica Neue", Arial, system-ui, sans-serif;
+    --serif: "Newsreader", Georgia, "Times New Roman", serif;
+    color-scheme: light;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #0F1826;
+      --sheet: #162235;
+      --ink: #E6ECF3;
+      --ink-soft: #9DABBD;
+      --rule: #2E3D53;
+      --grid: #223047;
+      --ledger: #5CC29B;
+      --ledger-tint: #173A30;
+      --flag: #E7C547;
+      --flag-ink: #2A2000;
+      color-scheme: dark;
+    }
+  }
+  *, *::before, *::after { box-sizing: inherit; }
+  html { scroll-padding-top: calc(env(safe-area-inset-top, 0px) + 72px); scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font: 400 1.0625rem/1.6 var(--sans);
+    font-variant-numeric: tabular-nums;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--ledger); text-underline-offset: 3px; }
+  a:focus-visible, button:focus-visible { outline: 3px solid var(--ledger); outline-offset: 3px; border-radius: 3px; }
+  img { max-width: 100%; }
+
+  .wrap { width: min(1120px, 100% - 2.5rem); margin-inline: auto; }
+
+  /* Header */
+  header.site {
+    position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+    background: color-mix(in srgb, var(--paper) 88%, transparent);
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--rule);
+  }
+  body::before {
+    content: ""; position: fixed; inset: 0 0 auto; z-index: 10;
+    height: env(safe-area-inset-top, 0px);
+    background: color-mix(in srgb, var(--paper) 88%, transparent);
+    backdrop-filter: blur(10px);
+  }
+  .site .wrap { display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; height: 60px; }
+  .brand { display: flex; align-items: center; gap: .6rem; font-weight: 800; font-size: 1.15rem; letter-spacing: -.01em; color: var(--ink); text-decoration: none; }
+  .brand svg { flex: none; }
+  nav.links { display: flex; gap: 1.4rem; font-size: .95rem; }
+  nav.links a { color: var(--ink-soft); text-decoration: none; font-weight: 500; }
+  nav.links a:hover { color: var(--ink); }
+  @media (max-width: 760px) { nav.links { display: none; } }
+
+  /* Hero */
+  .hero { padding: clamp(3rem, 7vw, 5.5rem) 0 clamp(3rem, 6vw, 4.5rem); }
+  .hero-grid { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: clamp(2rem, 5vw, 4rem); align-items: center; }
+  @media (max-width: 900px) { .hero-grid { grid-template-columns: 1fr; } }
+  .hero h1 {
+    font-size: clamp(2.3rem, 5.2vw, 3.6rem);
+    line-height: 1.04; letter-spacing: -.03em; font-weight: 800;
+    margin: 0 0 1.25rem; max-width: 14ch;
+  }
+  .hero p.lede { font-family: var(--serif); font-size: 1.25rem; line-height: 1.55; color: var(--ink-soft); max-width: 36ch; margin: 0 0 2rem; }
+  .actions { display: flex; flex-wrap: wrap; gap: .75rem; }
+  .btn {
+    display: inline-flex; align-items: center; gap: .5rem;
+    padding: .7rem 1.15rem; border-radius: 6px; font-weight: 600; font-size: .98rem; text-decoration: none;
+    border: 1.5px solid var(--ink); color: var(--ink);
+  }
+  .btn.primary { background: var(--ink); color: var(--paper); }
+  .btn:hover { border-color: var(--ledger); }
+  .btn.primary:hover { background: var(--ledger); border-color: var(--ledger); color: #fff; }
+
+  /* Consolidation figure */
+  .figure { background: var(--sheet); border: 1px solid var(--rule); border-radius: 10px; padding: 1.25rem; }
+  .figure-head { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; margin-bottom: .9rem; font-size: .88rem; color: var(--ink-soft); }
+  .figure-head strong { color: var(--ink); font-weight: 600; }
+  .sources { display: grid; gap: .55rem; }
+  .src {
+    display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .2rem 1rem; align-items: center;
+    width: 100%; text-align: left; font: inherit; color: inherit; cursor: pointer;
+    background: transparent; border: 1px solid var(--grid); border-radius: 6px; padding: .6rem .8rem;
+    transition: border-color .15s, background-color .15s;
+  }
+  .src:hover { border-color: var(--rule); }
+  .src[aria-pressed="true"] { border-color: var(--ledger); background: var(--ledger-tint); }
+  .src .label { font-weight: 600; font-size: 1rem; }
+  .src .raw { font-size: .98rem; justify-self: end; }
+  .src .where { grid-column: 1 / -1; font-size: .8rem; color: var(--ink-soft); }
+  .src.flagged .raw { background: var(--flag); color: var(--flag-ink); padding: 0 .35rem; border-radius: 3px; }
+
+  .merge { display: flex; align-items: center; gap: .6rem; margin: .9rem 0; color: var(--ink-soft); font-size: .82rem; }
+  .merge::before, .merge::after { content: ""; flex: 1; height: 1px; background: var(--rule); }
+
+  .target { border-top: 2px solid var(--ink); padding-top: .8rem; }
+  .target-row { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; }
+  .target-row .name { font-weight: 700; font-size: 1.05rem; }
+  .target-row .total { font-weight: 800; font-size: clamp(1.3rem, 3vw, 1.6rem); letter-spacing: -.02em; }
+  .trace { margin-top: .7rem; min-height: 3.4rem; font-size: .88rem; color: var(--ink-soft); border-left: 3px solid var(--ledger); padding: .3rem 0 .3rem .75rem; }
+  .trace b { color: var(--ink); font-weight: 600; }
+  .figure-note { margin: .9rem 0 0; font-size: .8rem; color: var(--ink-soft); }
+  .figure-note .swatch { display: inline-block; width: .8em; height: .8em; background: var(--flag); border-radius: 2px; vertical-align: -.05em; margin-right: .3rem; }
+
+  /* Sections */
+  section.block { padding: clamp(3rem, 6vw, 5rem) 0; border-top: 1px solid var(--rule); }
+  .block-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2.4fr); gap: clamp(1.5rem, 4vw, 4rem); }
+  @media (max-width: 860px) { .block-grid { grid-template-columns: 1fr; } }
+  h2 { font-size: clamp(1.6rem, 3vw, 2.1rem); line-height: 1.12; letter-spacing: -.02em; font-weight: 800; margin: 0; max-width: 16ch; }
+  h3 { font-size: 1.12rem; line-height: 1.3; font-weight: 700; margin: 0 0 .35rem; }
+  .prose p { font-family: var(--serif); font-size: 1.15rem; line-height: 1.65; margin: 0 0 1.1rem; max-width: 62ch; }
+  .prose p:last-child { margin-bottom: 0; }
+
+  .sources-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem 2rem; margin-top: 2rem; }
+  .sources-list div { border-top: 2px solid var(--ink); padding-top: .8rem; }
+  .sources-list p { margin: 0; color: var(--ink-soft); font-size: .98rem; }
+
+  /* Pipeline: a real sequence, so numbered */
+  ol.pipeline { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); counter-reset: stage; }
+  @media (max-width: 900px) { ol.pipeline { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 2rem; } }
+  @media (max-width: 520px) { ol.pipeline { grid-template-columns: 1fr; } }
+  ol.pipeline li { counter-increment: stage; padding: 0 1.25rem 0 0; position: relative; }
+  ol.pipeline li::before {
+    content: counter(stage); display: grid; place-items: center;
+    width: 2.1rem; height: 2.1rem; border-radius: 50%;
+    background: var(--ledger); color: #fff; font-weight: 700; font-size: .95rem; margin-bottom: .9rem;
+    position: relative; z-index: 1;
+  }
+  ol.pipeline li::after { content: ""; position: absolute; top: 1.05rem; left: 2.1rem; right: 0; height: 2px; background: var(--rule); }
+  ol.pipeline li:last-child::after { display: none; }
+  @media (max-width: 900px) { ol.pipeline li::after { display: none; } }
+  ol.pipeline p { margin: 0; color: var(--ink-soft); font-size: .97rem; }
+  .scope { margin-top: 2.5rem; padding: 1.1rem 1.25rem; background: var(--sheet); border: 1px solid var(--rule); border-radius: 8px; max-width: 70ch; }
+  .scope p { margin: 0; font-size: .98rem; }
+
+  /* Innovation */
+  dl.features { margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 0 2.5rem; }
+  dl.features > div { padding: 1.2rem 0; border-bottom: 1px solid var(--rule); }
+  dl.features dt { font-weight: 700; font-size: 1.08rem; margin-bottom: .3rem; }
+  dl.features dd { margin: 0; color: var(--ink-soft); font-size: .98rem; }
+  .compare { margin-top: 3rem; }
+  .compare h3 { margin-bottom: 1rem; }
+
+  /* Tables */
+  .table-scroll { overflow-x: auto; border: 1px solid var(--rule); border-radius: 8px; background: var(--sheet); }
+  table { border-collapse: collapse; width: 100%; min-width: 640px; font-size: .93rem; }
+  th, td { text-align: left; vertical-align: top; padding: .75rem .9rem; border-bottom: 1px solid var(--grid); }
+  th { font-weight: 600; color: var(--ink-soft); background: color-mix(in srgb, var(--grid) 45%, var(--sheet)); }
+  tbody tr:last-child td { border-bottom: 0; }
+  td:first-child { font-weight: 600; white-space: nowrap; }
+  .table-caption { margin: 1rem 0 0; font-size: .92rem; color: var(--ink-soft); max-width: 70ch; }
+
+  /* Team */
+  ul.team { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 1rem; }
+  ul.team li { background: var(--sheet); border: 1px solid var(--rule); border-radius: 8px; padding: 1rem 1.1rem; display: flex; gap: .9rem; align-items: center; }
+  .initials { flex: none; width: 2.6rem; height: 2.6rem; border-radius: 50%; display: grid; place-items: center; background: var(--ledger-tint); color: var(--ledger); font-weight: 700; font-size: .95rem; }
+  ul.team .who { min-width: 0; }
+  ul.team .who strong { display: block; font-weight: 600; }
+  ul.team .who a { font-size: .85rem; overflow-wrap: anywhere; }
+  .advisor { margin-top: 1.5rem; color: var(--ink-soft); font-size: .95rem; }
+
+  /* Documents */
+  ul.docs { list-style: none; margin: 0; padding: 0; border-top: 2px solid var(--ink); }
+  ul.docs li { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: 1rem 0; border-bottom: 1px solid var(--rule); flex-wrap: wrap; }
+  ul.docs .doc-name { font-weight: 600; }
+  ul.docs .doc-date { color: var(--ink-soft); font-size: .9rem; }
+  ul.docs .pending { color: var(--ink-soft); font-size: .9rem; }
+
+  footer { border-top: 1px solid var(--rule); padding: 2rem 0 2.5rem; color: var(--ink-soft); font-size: .9rem; }
+  footer .wrap { display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+
+  /* One orchestrated moment: the merge resolves on load */
+  @media (prefers-reduced-motion: no-preference) {
+    .src { animation: settle .5s ease-out both; }
+    .src:nth-child(2) { animation-delay: .12s; }
+    .src:nth-child(3) { animation-delay: .24s; }
+    .target { animation: appear .6s .55s ease-out both; }
+    @keyframes settle { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: none; } }
+    @keyframes appear { from { opacity: 0; } to { opacity: 1; } }
+  }
+</style>
+</head>
+<body>
+
+<header class="site">
+  <div class="wrap">
+    <a class="brand" href="#top" aria-label="Consolidata home">
+      <svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="6" fill="currentColor" style="color:var(--ledger)"/><path d="M8 10h7M8 16h7M8 22h7M17 10l7 6-7 6" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Consolidata
+    </a>
+    <nav class="links" aria-label="Sections">
+      <a href="#problem">Problem</a>
+      <a href="#system">System</a>
+      <a href="#innovation">Innovation</a>
+      <a href="#team">Team</a>
+      <a href="#documents">Documents</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <h1>Every number, traceable to the cell it came from.</h1>
+        <p class="lede">Consolidata reads documents arriving from departments and subsidiaries in any format, with no fixed template. It maps them to the organization’s common data model, validates them against accounting rules, and serves them as a single structured source.</p>
+        <div class="actions">
+          <a class="btn primary" href="docs/proje-taslagi.pdf">Read the project draft</a>
+          <a class="btn" href="#system">How it works</a>
+        </div>
+      </div>
+
+      <figure class="figure" aria-labelledby="fig-title">
+        <div class="figure-head">
+          <span id="fig-title"><strong>Q3 2026 consolidation</strong></span>
+          <span>3 sources, 3 formats</span>
+        </div>
+        <div class="sources" role="group" aria-label="Source line items; select one to see where it came from">
+          <button class="src" type="button" aria-pressed="true" data-trace="<b>Company A</b> / sales_q3.xlsx / Sheet “Summary” / Cell B14<br>Scale: thousands of TRY, normalized ×1,000">
+            <span class="label">Ciro</span><span class="raw">12.450</span>
+            <span class="where">sales_q3.xlsx, thousand TRY, Turkish number format</span>
+          </button>
+          <button class="src" type="button" aria-pressed="false" data-trace="<b>Company B</b> / annual_report.pdf / Page 4 / Table 2, row 3<br>Scale: millions of TRY, normalized ×1,000,000">
+            <span class="label">Net Satışlar</span><span class="raw">8,2</span>
+            <span class="where">annual_report.pdf, million TRY</span>
+          </button>
+          <button class="src flagged" type="button" aria-pressed="false" data-trace="<b>Company C</b> / erp_export.csv / Row 22, column “Revenue”<br>Confidence 0.71: unclear whether gross or net, awaiting user approval">
+            <span class="label">Revenue</span><span class="raw">4875300.00</span>
+            <span class="where">erp_export.csv, TRY</span>
+          </button>
+        </div>
+        <div class="merge">mapped to the common model</div>
+        <div class="target">
+          <div class="target-row">
+            <span class="name">Net sales</span>
+            <span class="total">TRY 25,525,300.00</span>
+          </div>
+          <div class="trace" id="trace" aria-live="polite"></div>
+        </div>
+        <p class="figure-note"><span class="swatch" aria-hidden="true"></span>Low-confidence values go to a person for approval before they reach a report.</p>
+      </figure>
+    </div>
+  </section>
+
+  <section class="block" id="problem">
+    <div class="wrap block-grid">
+      <h2>Much of a company’s data lives outside its ERP</h2>
+      <div>
+        <div class="prose">
+          <p>Organizations run standard processes such as purchasing, bookkeeping and financial consolidation on central ERP systems. Yet a large share of their data still sits in Excel sheets, PDF reports, Word documents, scanned papers and emails.</p>
+          <p>Today these documents are combined by hand: headers are matched one by one, units and formats are fixed, consistency is checked. The work is slow, depends on specific people and is prone to error. The origin of a figure is often lost along the way, which in financial reporting is a direct audit risk.</p>
+        </div>
+        <div class="sources-list">
+          <div>
+            <h3>Ad-hoc report requests</h3>
+            <p>When management asks several units for the same report, each one sends it in its own format, with its own headers and units.</p>
+          </div>
+          <div>
+            <h3>Different system landscapes</h3>
+            <p>Units on different software, or on no central system at all, send their data to headquarters as files.</p>
+          </div>
+          <div>
+            <h3>Documents that never enter a system</h3>
+            <p>Signed payment orders, bank statements, contracts and guarantee letters usually remain documents only.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="system">
+    <div class="wrap">
+      <div class="block-grid" style="margin-bottom:2.5rem">
+        <h2>From upload to report in four stages</h2>
+        <div class="prose"><p>The platform is built on a single processing pipeline that runs from uploading a document to presenting output to the user. Each stage passes its results forward together with their source.</p></div>
+      </div>
+      <ol class="pipeline">
+        <li>
+          <h3>Ingestion</h3>
+          <p>Documents are tagged with their source unit, company and period. The original file is archived unchanged.</p>
+        </li>
+        <li>
+          <h3>Extraction</h3>
+          <p>Text, tables and page layout are extracted by document type. Digital and scanned documents are processed separately; tables, paragraphs and footnotes are told apart.</p>
+        </li>
+        <li>
+          <h3>Mapping and validation</h3>
+          <p>Line items are mapped to the common data model; currency, scale, date and number formats are normalized, and financial consistency rules are applied.</p>
+        </li>
+        <li>
+          <h3>Output</h3>
+          <p>The structured data powers consolidated reports, analysis views and, in a later phase, natural language queries.</p>
+        </li>
+      </ol>
+      <div class="scope">
+        <p><strong>Scope.</strong> The infrastructure is domain-independent; financial and accounting data is the first application area. Sales, inventory and HR can be added as separate modules on the same foundation. Consolidata does not replace the ERP. It works alongside it and structures the data the ERP does not cover.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="innovation">
+    <div class="wrap">
+      <div class="block-grid" style="margin-bottom:2rem">
+        <h2>What we do differently</h2>
+        <div class="prose"><p>OCR, layout analysis and LLM-based extraction are not new on their own. The novelty lies in combining them inside a validation and learning loop designed for financial reporting.</p></div>
+      </div>
+      <dl class="features">
+        <div><dt>Template-free, contextual schema mapping</dt><dd>A line item’s meaning is inferred not only from its header but from neighboring columns, data types and sample values. Is “Total Revenue” net or gross?</dd></div>
+        <div><dt>A mapping memory that learns</dt><dd>Verified mappings are stored semantically. The language model runs only on the few ambiguous items the memory cannot resolve, so the system grows more consistent and cheaper with use.</dd></div>
+        <div><dt>Validation with accounting rules</dt><dd>Subtotals, balance sheet equality and scale consistency are checked automatically, catching both extraction errors and calculation errors in the source before they reach a consolidated report.</dd></div>
+        <div><dt>Cell-level traceability</dt><dd>Every value is stored with its source file, page or cell position and a confidence score. The original of any corrected value always stays accessible.</dd></div>
+        <div><dt>Cross-document inconsistency detection</dt><dd>Different names for the same concept (“Ciro”, “Net Satışlar”, “Revenue”), shifting scales and currencies, inconsistent period labels, duplicate records and missing fields are flagged before data is merged.</dd></div>
+        <div><dt>Natural language queries</dt><dd>Users type their question instead of writing queries or building filters, and get answers linked back to the source documents.</dd></div>
+        <div><dt>On-premise operation</dt><dd>Open-source local models process data without it leaving the organization, making the platform viable under data protection law (KVKK) and sector regulations.</dd></div>
+      </dl>
+
+      <div class="compare">
+        <h3>Compared with existing solutions</h3>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th scope="col">Solution type</th><th scope="col">Examples</th><th scope="col">What it provides</th><th scope="col">What is missing</th></tr></thead>
+            <tbody>
+              <tr><td>Document extraction platforms</td><td>ABBYY, Rossum, Azure Document Intelligence, AWS Textract</td><td>Field extraction from fixed-type documents such as invoices and receipts</td><td>Does not map free-form reports to a common schema or interpret financial meaning</td></tr>
+              <tr><td>ERP consolidation modules</td><td>SAP Group Reporting, Oracle FCCS</td><td>Consolidation of structured data</td><td>Requires data to already be in the ERP or arrive in a fixed template</td></tr>
+              <tr><td>Financial reporting platforms</td><td>Workiva, OneStream</td><td>Reporting process management</td><td>Data entry still depends on templates and manual preparation</td></tr>
+              <tr><td>General-purpose language models</td><td>Cloud LLM services</td><td>Flexible document interpretation</td><td>Costly, inconsistent and unverifiable; cloud use carries privacy risk</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="sectors">
+    <div class="wrap">
+      <div class="block-grid" style="margin-bottom:2rem">
+        <h2>Same concept, different meaning by sector</h2>
+        <div class="prose"><p>The hard part is not reading a document but interpreting what a value means and mapping it correctly. The Turkish Uniform Chart of Accounts (Tek Düzen Hesap Planı) serves as a shared reference: sector-specific items are linked first to account groups, then to the organization’s reporting model.</p></div>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th scope="col">Sector</th><th scope="col">Typical documents and data</th><th scope="col">What makes mapping hard</th><th scope="col">Effect on cash flow</th></tr></thead>
+          <tbody>
+            <tr><td>Construction and real estate</td><td>Progress payment reports, rent and property tables, subcontractor agreements</td><td>Revenue is recognized by percentage of completion; progress billing and collection are separate concepts</td><td>Advances and collection delays create large deviations</td></tr>
+            <tr><td>Energy</td><td>Production and sales reports, long-term contracts</td><td>Some amounts are FX-based; exchange rate and index clauses are buried in contract text</td><td>Future inflows depend on indices and exchange rates</td></tr>
+            <tr><td>Tourism</td><td>Occupancy and revenue reports, agency reconciliations</td><td>Strong seasonality; period definitions and prepayments vary</td><td>Cash inflows concentrate in certain months</td></tr>
+            <tr><td>Mining and manufacturing</td><td>Production, inventory and export documents</td><td>Physical units and monetary values are intertwined; exports are in foreign currency</td><td>Letter of credit and export payment terms are decisive</td></tr>
+            <tr><td>Logistics and trade</td><td>Invoice lists, account statements</td><td>The same customer appears under different trade names; record volume is high</td><td>Receivables aging is decisive</td></tr>
+            <tr><td>Finance (banking, factoring)</td><td>Credit and risk reports</td><td>Regulatory reporting formats; personal data restrictions</td><td>Data cannot leave the institution</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="table-caption">Mixed Turkish and English headers, abbreviations, the Turkish number format (1.234,56) and varying scale units are shared requirements across every sector.</p>
+    </div>
+  </section>
+
+  <section class="block" id="team">
+    <div class="wrap">
+      <div class="block-grid" style="margin-bottom:2rem">
+        <h2>Team</h2>
+        <div class="prose"><p>Bilkent University, Department of Computer Engineering, CS491/492 Senior Design Project.</p></div>
+      </div>
+      <ul class="team">
+        <li><span class="initials" aria-hidden="true">AK</span><span class="who"><strong>Ahmet Kenan Ataman</strong><a href="mailto:kenan.ataman@ug.bilkent.edu.tr">kenan.ataman@ug.bilkent.edu.tr</a></span></li>
+        <li><span class="initials" aria-hidden="true">EŞ</span><span class="who"><strong>Ece Şeşen</strong><a href="mailto:ece.sesen@ug.bilkent.edu.tr">ece.sesen@ug.bilkent.edu.tr</a></span></li>
+        <li><span class="initials" aria-hidden="true">MŞ</span><span class="who"><strong>Mehmet Emre Şahin</strong><a href="mailto:emresahin@ug.bilkent.edu.tr">emresahin@ug.bilkent.edu.tr</a></span></li>
+        <li><span class="initials" aria-hidden="true">NA</span><span class="who"><strong>Nevzat Han Altın</strong><a href="mailto:han.altin@ug.bilkent.edu.tr">han.altin@ug.bilkent.edu.tr</a></span></li>
+        <li><span class="initials" aria-hidden="true">UÖ</span><span class="who"><strong>Umut Çağın Özcan</strong><a href="mailto:cagin.ozcan@ug.bilkent.edu.tr">cagin.ozcan@ug.bilkent.edu.tr</a></span></li>
+      </ul>
+      <!-- Fill in the supervisor and jury once assigned -->
+      <p class="advisor">Supervisor: to be announced</p>
+    </div>
+  </section>
+
+  <section class="block" id="documents">
+    <div class="wrap block-grid">
+      <h2>Project documents</h2>
+      <!-- To add a report: put the PDF in docs/ and replace "Coming soon" with a link -->
+      <ul class="docs">
+        <li><span><span class="doc-name">Project draft (Turkish)</span><br><span class="doc-date">October 2026</span></span><a href="docs/proje-taslagi.pdf">Open PDF</a></li>
+        <li><span><span class="doc-name">Project Specification Report</span></span><span class="pending">Coming soon</span></li>
+        <li><span><span class="doc-name">Analysis and Requirement Report</span></span><span class="pending">Coming soon</span></li>
+        <li><span><span class="doc-name">Detailed Design Report</span></span><span class="pending">Coming soon</span></li>
+        <li><span><span class="doc-name">Final Report</span></span><span class="pending">Coming soon</span></li>
+      </ul>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>Consolidata, Bilkent University CS491/492, 2026–2027</span>
+    <a href="#top">Back to top</a>
+  </div>
+</footer>
+
+<script>
+  (function () {
+    var buttons = document.querySelectorAll('.src');
+    var trace = document.getElementById('trace');
+    function select(btn) {
+      buttons.forEach(function (b) { b.setAttribute('aria-pressed', b === btn ? 'true' : 'false'); });
+      trace.innerHTML = btn.getAttribute('data-trace');
+    }
+    buttons.forEach(function (b) { b.addEventListener('click', function () { select(b); }); });
+    select(buttons[0]);
+  })();
+</script>
+</body>
+</html>
